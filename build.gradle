@@ -8,6 +8,9 @@ version = '1.0-SNAPSHOT'
 repositories {
     mavenCentral()
     maven {
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+    }
+    maven {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
@@ -23,6 +26,7 @@ repositories {
 
 dependencies {
     implementation("com.github.milkbowl:vault:1.7.3")
+    compileOnly 'me.clip:placeholderapi:2.11.6'
     compileOnly("com.destroystokyo.paper:paper-api:1.16.5-R0.1-SNAPSHOT")
 }
 

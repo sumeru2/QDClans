@@ -2,10 +2,13 @@ package com.sumeru.clans.event;
 
 import com.sumeru.clans.QDClans;
 import com.sumeru.clans.gui.ClanMenu;
+import com.sumeru.clans.gui.ColorMenu;
 import com.sumeru.clans.gui.EnderchestMenu;
 import com.sumeru.clans.utils.Utils;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -15,8 +18,11 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class EventListener implements Listener {
     @EventHandler
@@ -58,11 +64,71 @@ public class EventListener implements Listener {
                     } else {
                         player.sendMessage(ChatColor.RED+"Кто то уже находится в хранилище!");
                     }
+                } else if (event.getCurrentItem().getType()==Material.LEATHER_CHESTPLATE) {
+                    ColorMenu menu = new ColorMenu();
+                    player.openInventory(menu.getInventory());
                 }
                 event.setCancelled(true);
             }
         } else if (event.getClickedInventory().getHolder() instanceof EnderchestMenu) {
             if (event.getCurrentItem() != null && event.getCurrentItem().getType()==Material.RED_STAINED_GLASS_PANE) {
+                event.setCancelled(true);
+            }
+        } else if (event.getClickedInventory().getHolder() instanceof ColorMenu) {
+            if (event.getCurrentItem() != null && event.getCurrentItem().getType()!=Material.AIR) {
+                String clanName = Utils.getPlayerClan(player.getName());
+                if (event.getCurrentItem().getType()!=Material.BARRIER && event.getCurrentItem().getType()!=Material.LEVER && clanName!=null) {
+                    ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans."+clanName);
+                    if (clanSection != null) {
+                        if (Objects.equals(clanSection.getString("leader"), player.getName())) {
+                            clanSection.set("glowing-color", event.getCurrentItem().getItemMeta().getPersistentDataContainer().get(new NamespacedKey(QDClans.instance, "color"), PersistentDataType.STRING));
+                            QDClans.instance.saveConfig();
+                            List<String> players = clanSection.getStringList("players");
+                            List<Player> onlinePlayers = new ArrayList<>();
+                            for (String p : players) {
+                                if (Bukkit.getPlayerExact(p)!=null) {
+                                    onlinePlayers.add(Bukkit.getPlayerExact(p));
+                                }
+                            }
+                            if (!onlinePlayers.isEmpty()) {
+                                onlinePlayers.forEach(plr -> QDClans.glower.glowPlayer(plr, clanSection.getString("glowing-color")));
+                            }
+                            player.sendMessage(ChatColor.GREEN+"Вы успешно сменили цвет подсветки!");
+                        } else {
+                            player.sendMessage(ChatColor.RED+"Вы не являетесь лидером клана!");
+                        }
+                        player.getOpenInventory().close();
+                    }
+                } else if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.LEVER) {
+                    if (clanName != null) {
+                        ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans." + clanName);
+                        if (clanSection != null) {
+                            if (Objects.equals(clanSection.getString("leader"), player.getName())) {
+                                boolean currentGlowState = clanSection.getBoolean("glowing-enabled");
+                                clanSection.set("glowing-enabled", !currentGlowState);
+                                QDClans.instance.saveConfig();
+                                player.sendMessage(ChatColor.GREEN + "Подсветка " + (currentGlowState ? "выключена" : "включена"));
+                                List<String> players = clanSection.getStringList("players");
+                                List<Player> onlinePlayers = new ArrayList<>();
+                                for (String p : players) {
+                                    if (Bukkit.getPlayerExact(p)!=null) {
+                                        onlinePlayers.add(Bukkit.getPlayerExact(p));
+                                    }
+                                }
+                                if (!onlinePlayers.isEmpty()) {
+                                    if (currentGlowState) {
+                                        onlinePlayers.forEach(plr -> QDClans.glower.stopGlowing(plr));
+                                    } else {
+                                        onlinePlayers.forEach(plr -> QDClans.glower.glowPlayer(plr, clanSection.getString("glowing-color")));
+                                    }
+                                }
+                            } else {
+                                player.sendMessage(ChatColor.RED + "Вы не являетесь лидером клана!");
+                            }
+                            player.getOpenInventory().close();
+                        }
+                    }
+                }
                 event.setCancelled(true);
             }
         }

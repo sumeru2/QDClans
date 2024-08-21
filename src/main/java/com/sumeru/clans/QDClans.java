@@ -4,8 +4,8 @@ import com.sumeru.clans.command.ClanCommand;
 import com.sumeru.clans.economy.Vault;
 import com.sumeru.clans.event.EventListener;
 import com.sumeru.clans.glowing.Glower;
+import com.sumeru.clans.placeholder.ClanPlaceholder;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.logging.Logger;
@@ -24,6 +24,9 @@ public final class QDClans extends JavaPlugin {
         } else {
             Vault.setupPermissions(instance);
             Vault.setupChat(instance);
+            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI")!=null) {
+                new ClanPlaceholder().register();
+            }
             saveDefaultConfig();
             logger.info("Plugin enabled!");
             getCommand("clan").setExecutor(new ClanCommand());
