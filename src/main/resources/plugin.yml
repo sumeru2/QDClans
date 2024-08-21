@@ -1,0 +1,9 @@
+name: QDClans
+version: '1.0-SNAPSHOT'
+main: com.sumeru.clans.QDClans
+api-version: '1.16'
+depend:
+  - Vault
+commands:
+  clan:
+    description: Команда для кланов
