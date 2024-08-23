@@ -5,6 +5,8 @@ import com.sumeru.clans.gui.ClanMenu;
 import com.sumeru.clans.gui.ColorMenu;
 import com.sumeru.clans.gui.EnderchestMenu;
 import com.sumeru.clans.utils.Utils;
+import me.neznamy.tab.api.TabAPI;
+import me.neznamy.tab.api.TabPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -27,19 +29,7 @@ import java.util.Objects;
 public class EventListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        String playerName = event.getPlayer().getName();
-        String clanName = Utils.getPlayerClan(playerName);
-
-        if (clanName != null) {
-            ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans."+clanName);
-
-            if (clanSection != null && clanSection.getBoolean("glowing-enabled")) {
-                String glowingColor = clanSection.getString("glowing-color");
-                if (glowingColor != null) {
-                    QDClans.glower.glowPlayer(event.getPlayer(), glowingColor);
-                }
-            }
-        }
+        Bukkit.getScheduler().scheduleSyncDelayedTask(QDClans.instance, () -> Utils.switchGlowing(event.getPlayer()), 20L);
     }
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
@@ -50,7 +40,7 @@ public class EventListener implements Listener {
     }
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        QDClans.glower.stopGlowing(event.getPlayer());
+        Utils.switchGlowing(event.getPlayer());
     }
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -81,19 +71,16 @@ public class EventListener implements Listener {
                     ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans."+clanName);
                     if (clanSection != null) {
                         if (Objects.equals(clanSection.getString("leader"), player.getName())) {
-                            clanSection.set("glowing-color", event.getCurrentItem().getItemMeta().getPersistentDataContainer().get(new NamespacedKey(QDClans.instance, "color"), PersistentDataType.STRING));
-                            QDClans.instance.saveConfig();
-                            List<String> players = clanSection.getStringList("players");
-                            List<Player> onlinePlayers = new ArrayList<>();
-                            for (String p : players) {
-                                if (Bukkit.getPlayerExact(p)!=null) {
-                                    onlinePlayers.add(Bukkit.getPlayerExact(p));
-                                }
+                            String glowingColor = event.getCurrentItem().getItemMeta().getPersistentDataContainer().get(new NamespacedKey(QDClans.instance, "color"), PersistentDataType.STRING);
+                            if (glowingColor != null) {
+                                clanSection.set("glowing-color", glowingColor);
+                                QDClans.instance.saveConfig();
+                                TabPlayer plr = TabAPI.getInstance().getPlayer(player.getUniqueId());
+                                String tagPrefix = TabAPI.getInstance().getNameTagManager().getOriginalPrefix(plr);
+
+                                Utils.setGlowing(plr, glowingColor, tagPrefix);
+                                player.sendMessage(ChatColor.GREEN + "Вы успешно сменили цвет подсветки!");
                             }
-                            if (!onlinePlayers.isEmpty()) {
-                                onlinePlayers.forEach(plr -> QDClans.glower.glowPlayer(plr, clanSection.getString("glowing-color")));
-                            }
-                            player.sendMessage(ChatColor.GREEN+"Вы успешно сменили цвет подсветки!");
                         } else {
                             player.sendMessage(ChatColor.RED+"Вы не являетесь лидером клана!");
                         }
@@ -116,11 +103,7 @@ public class EventListener implements Listener {
                                     }
                                 }
                                 if (!onlinePlayers.isEmpty()) {
-                                    if (currentGlowState) {
-                                        onlinePlayers.forEach(plr -> QDClans.glower.stopGlowing(plr));
-                                    } else {
-                                        onlinePlayers.forEach(plr -> QDClans.glower.glowPlayer(plr, clanSection.getString("glowing-color")));
-                                    }
+                                    onlinePlayers.forEach(Utils::switchGlowing);
                                 }
                             } else {
                                 player.sendMessage(ChatColor.RED + "Вы не являетесь лидером клана!");

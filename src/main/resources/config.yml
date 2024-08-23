@@ -34,4 +34,5 @@ messages:
 clans:
 invite-command-delay: 30
 clan-creation-cost: 100
+clan-name-placeholder: "&d%clan_name%"
 storageData:

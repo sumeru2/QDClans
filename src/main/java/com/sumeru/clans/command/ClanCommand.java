@@ -5,6 +5,7 @@ import com.sumeru.clans.economy.Vault;
 import com.sumeru.clans.gui.ClanMenu;
 import com.sumeru.clans.utils.CooldownManager;
 import com.sumeru.clans.utils.Utils;
+import me.neznamy.tab.api.TabAPI;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -69,7 +70,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                                                 String message = ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.clan_created_successfully"));
                                                 message = message.replace("%clan_name%", args[1]);
                                                 player.sendMessage(message);
-                                                QDClans.glower.glowPlayer(player, glowColor);
+                                                Utils.switchGlowing(player);
                                                 return true;
                                             } else {
                                                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.clan_creation_error_clan_exists")));
@@ -282,23 +283,27 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                             ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans." + clanName);
 
                             if (clanName != null && clanSection != null) {
-                                List<String> players = clanSection.getStringList("players");
-                                players.remove(player.getName());
-                                clanSection.set("players", players);
-                                QDClans.instance.saveConfig();
-                                List<Player> onlinePlayers = new ArrayList<>();
-                                for (String p : players) {
-                                    if (Bukkit.getPlayerExact(p)!=null) {
-                                        onlinePlayers.add(Bukkit.getPlayerExact(p));
+                                if (!Objects.equals(clanSection.getString("leader"), player.getName())) {
+                                    List<String> players = clanSection.getStringList("players");
+                                    players.remove(player.getName());
+                                    clanSection.set("players", players);
+                                    QDClans.instance.saveConfig();
+                                    List<Player> onlinePlayers = new ArrayList<>();
+                                    for (String p : players) {
+                                        if (Bukkit.getPlayerExact(p) != null) {
+                                            onlinePlayers.add(Bukkit.getPlayerExact(p));
+                                        }
                                     }
+                                    if (!onlinePlayers.isEmpty()) {
+                                        String message = Utils.getExitNotification(player.getName());
+                                        onlinePlayers.forEach(plr -> plr.sendMessage(message));
+                                    }
+                                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.clan_exit_success").replace("%clan_name%", clanName)));
+                                    Utils.switchGlowing(player);
+                                    return true;
+                                } else {
+                                    player.sendMessage(ChatColor.RED+"Вы не можете выйти из своего же клана!");
                                 }
-                                if (!onlinePlayers.isEmpty()) {
-                                    String message = Utils.getExitNotification(player.getName());
-                                    onlinePlayers.forEach(plr -> plr.sendMessage(message));
-                                }
-                                player.sendMessage(ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.clan_exit_success").replace("%clan_name%", clanName)));
-                                QDClans.glower.stopGlowing(player);
-                                return true;
                             } else {
                                 player.sendMessage(ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.no_clan_membership")));
                             }
@@ -319,8 +324,8 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                                     if (players.contains(playerToKick)) {
                                         if (!playerToKick.equals(player.getName())) {
                                             Player p = Bukkit.getPlayerExact(playerToKick);
-                                            if (p != null) {
-                                                QDClans.glower.stopGlowing(p);
+                                            if (p != null && clanSection.getBoolean("glowing-enabled")) {
+                                                Utils.switchGlowing(p);
                                             }
                                             players.remove(playerToKick);
                                             clanSection.set("players", players);
@@ -367,9 +372,6 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                                 ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans." + clanName);
                                 if (clanSection != null) {
                                     List<String> players = clanSection.getStringList("players");
-                                    QDClans.instance.getConfig().set("clans." + clanName, null);
-                                    QDClans.instance.getConfig().set("storageData." + clanName, null);
-                                    QDClans.instance.saveConfig();
                                     player.sendMessage(ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.clan_dissolved_successfully")));
                                     List<Player> onlinePlayers = new ArrayList<>();
                                     for (String p : players) {
@@ -380,8 +382,12 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                                     if (!onlinePlayers.isEmpty()) {
                                         String message = ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.clan_dissolved_by_leader"));
                                         onlinePlayers.forEach(plr -> plr.sendMessage(message));
-                                        onlinePlayers.forEach(plr -> QDClans.glower.stopGlowing(plr));
+                                        onlinePlayers.forEach(Utils::switchGlowing);
                                     }
+                                    QDClans.instance.getConfig().set("clans." + clanName, null);
+                                    QDClans.instance.getConfig().set("storageData." + clanName, null);
+                                    QDClans.instance.saveConfig();
+
                                     return true;
                                 }
                             } else {
@@ -437,7 +443,7 @@ public class ClanCommand implements CommandExecutor, TabCompleter {
                                                 onlinePlayers.forEach(plr -> plr.sendMessage(message));
                                             }
                                             Utils.updateClan(targetClan);
-                                            QDClans.glower.glowPlayer(player, targetClanSection.getString("glowing-color"));
+                                            Utils.switchGlowing(player);
                                             return true;
                                         } else {
                                             player.sendMessage(ChatColor.translateAlternateColorCodes('&', QDClans.instance.getConfig().getString("messages.invite_error_max_members_reached").replace("%clan_name%", targetClan)));

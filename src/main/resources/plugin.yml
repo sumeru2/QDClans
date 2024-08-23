@@ -5,6 +5,7 @@ api-version: '1.16'
 softdepend: [PlaceholderAPI]
 depend:
   - Vault
+  - TAB
 commands:
   clan:
     description: Команда для кланов

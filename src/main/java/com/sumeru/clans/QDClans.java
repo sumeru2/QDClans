@@ -3,9 +3,11 @@ package com.sumeru.clans;
 import com.sumeru.clans.command.ClanCommand;
 import com.sumeru.clans.economy.Vault;
 import com.sumeru.clans.event.EventListener;
-import com.sumeru.clans.glowing.Glower;
-import com.sumeru.clans.placeholder.ClanPlaceholder;
+import com.sumeru.clans.utils.Utils;
+import me.neznamy.tab.api.TabAPI;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.logging.Logger;
@@ -13,7 +15,7 @@ import java.util.logging.Logger;
 public final class QDClans extends JavaPlugin {
     public static QDClans instance;
     public static Logger logger;
-    public static Glower glower = new Glower();
+    public boolean usingTAB;
     @Override
     public void onEnable() {
         instance = this;
@@ -24,13 +26,26 @@ public final class QDClans extends JavaPlugin {
         } else {
             Vault.setupPermissions(instance);
             Vault.setupChat(instance);
-            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI")!=null) {
-                new ClanPlaceholder().register();
+            if (Bukkit.getPluginManager().getPlugin("TAB")!=null) {
+                usingTAB = true;
+                TabAPI.getInstance().getPlaceholderManager().registerPlayerPlaceholder("%clan_name%", 100, player -> {
+                    String clanName = Utils.getPlayerClan(player.getName());
+                    if (clanName != null) {
+                        String message = QDClans.instance.getConfig().getString("clan-name-placeholder");
+                        message = ChatColor.translateAlternateColorCodes('&', message.replace("%clan_name%", clanName));
+                        return message;
+                    } else {
+                        return "";
+                    }
+                });
+                saveDefaultConfig();
+                logger.info("Plugin enabled!");
+                getCommand("clan").setExecutor(new ClanCommand());
+                Bukkit.getPluginManager().registerEvents(new EventListener(), this);
+            } else {
+                getLogger().severe(String.format("[%s] - Плагин отключается, так как отсутствует одна из зависимостей - TAB!", getDescription().getName()));
+                getServer().getPluginManager().disablePlugin(this);
             }
-            saveDefaultConfig();
-            logger.info("Plugin enabled!");
-            getCommand("clan").setExecutor(new ClanCommand());
-            Bukkit.getPluginManager().registerEvents(new EventListener(), this);
         }
     }
 

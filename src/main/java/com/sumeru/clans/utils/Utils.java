@@ -1,6 +1,8 @@
 package com.sumeru.clans.utils;
 
 import com.sumeru.clans.QDClans;
+import me.neznamy.tab.api.TabAPI;
+import me.neznamy.tab.api.TabPlayer;
 import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -19,6 +21,52 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Utils {
+    public static void setGlowing(TabPlayer plr, String glowingColor, String tagPrefix) {
+        switch (glowingColor.toLowerCase()) {
+            case "red" -> glowingColor = color("&c");
+            case "dark_red" -> glowingColor = color("&4");
+            case "gold" -> glowingColor = color("&6");
+            case "yellow" -> glowingColor = color("&e");
+            case "aqua" -> glowingColor = color("&b");
+            case "dark_aqua" -> glowingColor = color("&3");
+            case "blue" -> glowingColor = color("&9");
+            case "dark_blue" -> glowingColor = color("&1");
+            case "green" -> glowingColor = color("&a");
+            case "dark_green" -> glowingColor = color("&2");
+            case "light_purple" -> glowingColor = color("&d");
+            case "dark_purple" -> glowingColor = color("&5");
+            case "gray" -> glowingColor = color("&7");
+            case "dark_gray" -> glowingColor = color("&8");
+            case "black" -> glowingColor = color("&0");
+        }
+        TabAPI.getInstance().getNameTagManager().setPrefix(plr, ((!tagPrefix.isEmpty()) ? tagPrefix : "")+glowingColor);
+        TabAPI.getInstance().getTabListFormatManager().setPrefix(plr, tagPrefix);
+    }
+    public static void switchGlowing(Player player) {
+        String playerName = player.getName();
+        String clanName = getPlayerClan(playerName);
+        TabPlayer plr = TabAPI.getInstance().getPlayer(player.getUniqueId());
+        String tagPrefix = TabAPI.getInstance().getNameTagManager().getOriginalPrefix(plr);
+
+        if (clanName != null) {
+            ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans."+clanName);
+
+            if (clanSection != null) {
+                Boolean isGlowing = clanSection.getBoolean("glowing-enabled");
+                String glowingColor = clanSection.getString("glowing-color");
+                if (glowingColor != null) {
+                    if (!isGlowing || !player.isGlowing()) {
+                        player.setGlowing(true);
+                        setGlowing(plr, glowingColor, tagPrefix);
+                        return;
+                    }
+                }
+            }
+        }
+        player.setGlowing(false);
+        TabAPI.getInstance().getNameTagManager().setPrefix(plr, tagPrefix);
+        TabAPI.getInstance().getTabListFormatManager().setPrefix(plr, tagPrefix);
+    }
     public static byte[] serializeItems(Map<Integer, ItemStack> itemMap) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              BukkitObjectOutputStream oos = new BukkitObjectOutputStream(baos)) {
@@ -29,7 +77,9 @@ public class Utils {
             return new byte[0];
         }
     }
-
+    public static String color(String msg) {
+        return ChatColor.translateAlternateColorCodes('&', msg);
+    }
     public static Map<Integer, ItemStack> deserializeItems(byte[] data) {
         try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
              BukkitObjectInputStream ois = new BukkitObjectInputStream(bais)) {
