@@ -21,7 +21,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class Utils {
-    public static void setGlowing(TabPlayer plr, String glowingColor, String tagPrefix) {
+    public static void setGlowing(TabPlayer plr, String glowingColor) {
+        String tagPrefix = TabAPI.getInstance().getNameTagManager().getOriginalPrefix(plr);
         switch (glowingColor.toLowerCase()) {
             case "red" -> glowingColor = color("&c");
             case "dark_red" -> glowingColor = color("&4");
@@ -46,7 +47,6 @@ public class Utils {
         String playerName = player.getName();
         String clanName = getPlayerClan(playerName);
         TabPlayer plr = TabAPI.getInstance().getPlayer(player.getUniqueId());
-        String tagPrefix = TabAPI.getInstance().getNameTagManager().getOriginalPrefix(plr);
 
         if (clanName != null) {
             ConfigurationSection clanSection = QDClans.instance.getConfig().getConfigurationSection("clans."+clanName);
@@ -57,13 +57,14 @@ public class Utils {
                 if (glowingColor != null) {
                     if (!isGlowing || !player.isGlowing()) {
                         player.setGlowing(true);
-                        setGlowing(plr, glowingColor, tagPrefix);
+                        setGlowing(plr, glowingColor);
                         return;
                     }
                 }
             }
         }
         player.setGlowing(false);
+        String tagPrefix = TabAPI.getInstance().getNameTagManager().getOriginalPrefix(plr);
         TabAPI.getInstance().getNameTagManager().setPrefix(plr, tagPrefix);
         TabAPI.getInstance().getTabListFormatManager().setPrefix(plr, tagPrefix);
     }

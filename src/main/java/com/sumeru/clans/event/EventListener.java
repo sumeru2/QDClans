@@ -45,7 +45,7 @@ public class EventListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        if (event.getClickedInventory().getHolder() instanceof ClanMenu) {
+        if (event.getClickedInventory()!=null&&event.getClickedInventory().getHolder() instanceof ClanMenu) {
             if (event.getCurrentItem() != null && event.getCurrentItem().getType()!=Material.AIR) {
                 if (event.getCurrentItem().getType()==Material.ENDER_CHEST) {
                     EnderchestMenu menu = new EnderchestMenu(Utils.getPlayerClan(player.getName()));
@@ -75,10 +75,16 @@ public class EventListener implements Listener {
                             if (glowingColor != null) {
                                 clanSection.set("glowing-color", glowingColor);
                                 QDClans.instance.saveConfig();
-                                TabPlayer plr = TabAPI.getInstance().getPlayer(player.getUniqueId());
-                                String tagPrefix = TabAPI.getInstance().getNameTagManager().getOriginalPrefix(plr);
-
-                                Utils.setGlowing(plr, glowingColor, tagPrefix);
+                                List<String> players = clanSection.getStringList("players");
+                                List<Player> onlinePlayers = new ArrayList<>();
+                                for (String p : players) {
+                                    if (Bukkit.getPlayerExact(p)!=null) {
+                                        onlinePlayers.add(Bukkit.getPlayerExact(p));
+                                    }
+                                }
+                                if (!onlinePlayers.isEmpty()) {
+                                    onlinePlayers.forEach(plr -> Utils.setGlowing(TabAPI.getInstance().getPlayer(plr.getUniqueId()), glowingColor));
+                                }
                                 player.sendMessage(ChatColor.GREEN + "Вы успешно сменили цвет подсветки!");
                             }
                         } else {
